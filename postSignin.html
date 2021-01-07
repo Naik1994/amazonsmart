@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Post sign-in</title>
+        <script type="text/javascript" src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    </head>
+    <body>
+        <div id="amazon-root"></div>
+        <script type="text/javascript">
+            window.onAmazonLoginReady = function() {
+                // Use the Client ID of your security profile
+                amazon.Login.setClientId('amzn1.application-oa2-client.4ca458d86ce64196b725753c4f4b1861');
+            };
+            (function(d) {
+                var a = d.createElement('script'); a.type = 'text/javascript';
+                a.async = true; a.id = 'amazon-login-sdk';
+                a.src = 'https://assets.loginwithamazon.com/sdk/na/login1.js';
+                d.getElementById('amazon-root').appendChild(a);
+            })(document);
+
+            function selectAndCopy(id) {
+                var text = $("#" + id).select();
+                document.execCommand("copy");
+            }
+        </script>
+        <div id="content">
+            <table>
+                <tbody>
+                    <tr>
+                        <td style="font-weight: bold;">Authorization Code</td>
+                        <td id="authorizationCode"></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold;">Refresh Token</td>
+                        <td><textarea id="refreshToken" readonly="readonly" cols="100" rows="6"></textarea></td>
+                        <td><button onclick="selectAndCopy('refreshToken'); return false;">Copy</button></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold;">Access Token</td>
+                        <td><textarea id="accessToken" readonly="readonly" cols="100" rows="6"></textarea></td>
+                        <td><button onclick="selectAndCopy('accessToken'); return false;">Copy</button></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold;">Access Token Expiry</td>
+                        <td id="expiry"></td>
+                    </tr>
+                </tbody>
+            </table>
+            <button id="refresh" type="button">Refresh Access Token</button>
+        </div>
+        <script type="text/javascript">
+            function parseQueryString () {
+                var parsedParameters = {},
+                uriParameters = location.search.substr(1).split('&');
+
+                for (var i = 0; i < uriParameters.length; i++) {
+                    var parameter = uriParameters[i].split('=');
+                    parsedParameters[parameter[0]] = decodeURIComponent(parameter[1]);
+                }
+
+                return parsedParameters;
+            }
+
+            $(document).ready(function() {
+                var params = parseQueryString();
+                $("#authorizationCode").text(params.code);
+
+                $.ajax({
+                    type: 'POST',
+                    url: 'https://api.amazon.com/auth/o2/token',
+                    data: {
+                        grant_type: 'authorization_code',
+                        // Replace with your security profile's Client ID
+                        client_id: 'amzn1.application-oa2-client.4ca458d86ce64196b725753c4f4b1861',
+                        // Replace with your security profile's Client Secret
+                        client_secret: '0a00805936fc1bad79a0f70106dff9b71b0faa4c070785ede07bc1c8730c2f02',
+                        code: params.code
+                    },
+                    success: function(data) {
+                        $("#refreshToken").text(data.refresh_token);
+                        $("#accessToken").text(data.access_token);
+
+                        var expireDate = new Date(Date.now() + data.expires_in * 1000);
+                        $("#expiry").text(expireDate);
+                    }
+                });
+            });
+
+            $("#refresh").click(function(event) {
+                if ($("#refreshToken").text().length > 0) {
+                    $.ajax({
+                        type: 'POST',
+                        url: 'https://api.amazon.com/auth/o2/token',
+                        data: {
+                            grant_type: 'refresh_token',
+                            // Replace with your security profile's Client ID
+                            client_id: 'amzn1.application-oa2-client.4ca458d86ce64196b725753c4f4b1861',
+                            // Replace with your security profile's Client Secret
+                            client_secret: '0a00805936fc1bad79a0f70106dff9b71b0faa4c070785ede07bc1c8730c2f02',
+                            refresh_token: $("#refreshToken").text()
+                        },
+                        success: function(data) {
+                            $("#refreshToken").text(data.refresh_token);
+                            $("#accessToken").text(data.access_token);
+
+                            var expireDate = new Date(Date.now() + data.expires_in * 1000);
+                            $("#expiry").text(expireDate);
+                        }
+                    });
+                }
+            });
+        </script>
+    </body>
+</html>
